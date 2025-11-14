@@ -1,14 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { Target } from '@/types';
 
 export function useTargets(month?: number, year?: number) {
   const params = new URLSearchParams();
   if (month) params.append('month', month.toString());
   if (year) params.append('year', year.toString());
 
-  return useQuery({
+  return useQuery<Target[]>({
     queryKey: ['targets', month, year],
-    queryFn: () => apiClient.get(`/targets?${params.toString()}`),
+    queryFn: () => apiClient.get<Target[]>(`/targets?${params.toString()}`),
   });
 }
 

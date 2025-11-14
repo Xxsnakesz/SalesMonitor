@@ -53,6 +53,7 @@ export class CustomerRepository {
           select: {
             id: true,
             name: true,
+            departmentId: true,
           },
         },
         progresses: {
