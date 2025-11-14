@@ -1,0 +1,409 @@
+Production Prompt (Replit) — Sales Target & Progress Monitoring (UI-First)
+
+I want to build a full-stack web application using Next.js + TypeScript + PostgreSQL + Prisma to monitor sales targets, customers, and progress tracking.
+
+The app will run on Replit, so:
+
+No Docker, no nginx, no GitHub Actions.
+
+Just use the standard Next.js dev / prod server.
+
+Use an external PostgreSQL database (Neon / Supabase / Railway) configured via DATABASE_URL.
+
+Use Replit Secrets for environment variables.
+
+For now, the main focus is on UI/UX first (dashboards, tables, forms, charts). Backend can be minimal, but the structure should be clean and ready to extend.
+
+1. Tech Stack
+
+Frontend
+
+Next.js (Pages Router is OK)
+
+TypeScript
+
+TailwindCSS
+
+shadcn/ui for UI components
+
+React Query (TanStack Query) for data fetching
+
+Recharts (or similar) for charts
+
+Backend (basic for now)
+
+Next.js API routes under /api/v1/...
+
+Prisma ORM with PostgreSQL
+
+Simple auth (email + password) with RBAC: ADMIN, GM, AM
+
+Password hashing: Argon2 or bcrypt (≥ 12 rounds)
+
+JWT-based auth (Access Token + Refresh Token) stored in httpOnly cookies
+
+You may stub/mimic some API behavior with mock data initially, but please generate the full structure so it’s easy to plug in the real DB.
+
+2. Project Structure (Single App, Replit-Friendly)
+
+Use a single Next.js app (no monorepo):
+
+/ (project root)
+├─ src/
+│  ├─ pages/
+│  │  ├─ index.tsx              # Landing / login redirect
+│  │  ├─ dashboard/index.tsx    # Main dashboard
+│  │  ├─ dashboard/customers.tsx
+│  │  ├─ dashboard/targets.tsx
+│  │  ├─ auth/login.tsx
+│  │  ├─ auth/logout.tsx
+│  │  └─ api/
+│  │      └─ v1/
+│  │         ├─ auth/
+│  │         │  ├─ login.ts
+│  │         │  ├─ refresh.ts
+│  │         │  └─ me.ts
+│  │         ├─ customers/
+│  │         │  ├─ index.ts     # GET/POST customers
+│  │         │  └─ [id].ts      # GET/PUT/DELETE customer
+│  │         ├─ progress/
+│  │         │  └─ index.ts     # POST progress
+│  │         ├─ targets/
+│  │         │  └─ index.ts     # GET/POST targets
+│  │         └─ reports/
+│  │            ├─ targets.ts
+│  │            ├─ customers.ts
+│  │            └─ progress.ts
+│  ├─ components/
+│  │  ├─ layout/
+│  │  ├─ nav/
+│  │  ├─ dashboard/
+│  │  ├─ forms/
+│  │  └─ charts/
+│  ├─ hooks/
+│  ├─ styles/
+│  ├─ types/
+│  ├─ lib/
+│  │  ├─ prisma.ts
+│  │  ├─ auth/
+│  │  │  ├─ tokens.ts
+│  │  │  ├─ hash.ts
+│  │  │  └─ currentUser.ts
+│  │  ├─ rbac/
+│  │  │  └─ permissions.ts
+│  │  ├─ api-client.ts          # wrapper around fetch with auth
+│  │  └─ logger.ts
+│  ├─ server/
+│  │  ├─ repositories/
+│  │  │  ├─ user.repo.ts
+│  │  │  ├─ customer.repo.ts
+│  │  │  ├─ target.repo.ts
+│  │  │  └─ progress.repo.ts
+│  │  ├─ services/
+│  │  │  ├─ auth.service.ts
+│  │  │  ├─ customer.service.ts
+│  │  │  ├─ target.service.ts
+│  │  │  └─ report.service.ts
+│  │  ├─ validation/
+│  │  │  ├─ auth.schema.ts
+│  │  │  ├─ customer.schema.ts
+│  │  │  ├─ progress.schema.ts
+│  │  │  └─ target.schema.ts
+│  │  └─ middlewares/
+│  │     ├─ requireAuth.ts
+│  │     ├─ requireRole.ts
+│  │     └─ errorHandler.ts
+├─ prisma/
+│  ├─ schema.prisma
+│  └─ seed.ts
+├─ package.json
+├─ next.config.js
+├─ tailwind.config.js
+└─ README.md
+
+3. Database Schema (Prisma)
+
+Use PostgreSQL + Prisma with this schema (or very close to it), including Decimal and indexes:
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  GM
+  AM
+}
+
+model User {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  username      String?      @unique
+  name          String
+  password      String
+  role          Role
+  departmentId  String?
+  managerId     String?      // GM ID for AM
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+
+  department    Department?  @relation(fields: [departmentId], references: [id])
+  customers     Customer[]   @relation("AMCustomers")
+
+  @@index([role])
+  @@index([departmentId])
+}
+
+model Department {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  gmId      String?
+  createdAt DateTime   @default(now())
+
+  gm        User?      @relation(fields: [gmId], references: [id])
+  targets   Target[]
+}
+
+model Target {
+  id           String     @id @default(uuid())
+  amount       Decimal    @db.Numeric(18, 2)
+  currency     String     @default("IDR")
+  month        Int
+  year         Int
+  departmentId String?
+  userId       String?
+  createdAt    DateTime   @default(now())
+
+  department   Department? @relation(fields: [departmentId], references: [id])
+  user         User?       @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([departmentId])
+  @@index([year, month])
+}
+
+model Customer {
+  id            String     @id @default(uuid())
+  amId          String
+  companyName   String
+  pic           String
+  phone         String
+  email         String?
+  potential     Decimal    @db.Numeric(18, 2)
+  timeline      DateTime?
+  status        String      // e.g. "prospect, ongoing, proposal, negotiation, closed-won, closed-lost"
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+
+  am            User        @relation("AMCustomers", fields: [amId], references: [id])
+  progresses    Progress[]
+
+  @@index([amId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Progress {
+  id          String       @id @default(uuid())
+  customerId  String
+  amId        String
+  date        DateTime     @default(now())
+  description String
+  status      String
+  createdAt   DateTime     @default(now())
+
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  am          User         @relation(fields: [amId], references: [id])
+  attachments Attachment[]
+}
+
+model Attachment {
+  id         String     @id @default(uuid())
+  filename   String
+  path       String
+  size       Int
+  mimeType   String
+  uploadedBy String
+  progressId String?
+  createdAt  DateTime   @default(now())
+
+  progress   Progress?  @relation(fields: [progressId], references: [id])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String?
+  timestamp DateTime @default(now())
+}
+
+
+For now, file uploads & virus scanning can be skipped or stubbed; just provide the UI part (attachment list, upload button, etc.) and a basic API handler that accepts a file but doesn't need ClamAV.
+
+4. Authentication & RBAC (Simple but Realistic)
+
+Implement a simple but real auth flow:
+
+POST /api/v1/auth/login:
+
+Accept email + password
+
+Validate against Prisma User
+
+On success, create access token + refresh token (JWT)
+
+Set httpOnly cookies
+
+GET /api/v1/auth/me:
+
+Return current user (id, name, role, department info)
+
+RBAC rules:
+
+AM: only their customers & progress
+
+GM: customers & targets of all AMs in their department
+
+ADMIN: full access
+
+Middleware helpers:
+
+requireAuth(req, res)
+
+requireRole(['ADMIN', 'GM'])
+
+requireManagerOrOwner(currentUser, amId)
+
+For now, don’t overcomplicate token rotation: a simple short-lived access token is enough as long as the structure makes it easy to improve later.
+
+5. UI Requirements (FOCUS AREA)
+
+This is the most important part for now.
+
+5.1 Layout & Navigation
+
+Sidebar with:
+
+Dashboard
+
+Customers
+
+Targets
+
+Reports
+
+Top bar with:
+
+User info (name, role)
+
+Logout button
+
+Use shadcn/ui components where appropriate (buttons, cards, tables, dialogs, forms).
+
+5.2 Dashboards
+
+AM Dashboard:
+
+Card: Target vs Actual (numeric + bar chart)
+
+Card: Pipeline total value (sum of potential for active customers)
+
+Donut chart: Customer funnel by status
+
+Table: “Customers needing follow-up” (no progress in > 7 days)
+
+Timeline: recent progress updates
+
+GM Dashboard:
+
+List / chart of AMs under their department
+
+Per-AM cards: target vs actual, pipeline, number of active customers
+
+Admin Dashboard:
+
+Overview of all departments
+
+Total targets, total pipeline, number of users, number of customers
+
+Use React Query for data fetching and skeleton loading for initial load.
+
+6. API Design (Minimal but Clean)
+
+Create basic versions of:
+
+GET /api/v1/customers (filters: by status, by AM, pagination)
+
+POST /api/v1/customers (create customer)
+
+GET /api/v1/progress (by customer)
+
+POST /api/v1/progress (add progress note)
+
+GET /api/v1/report/targets (target vs actual per user / per department)
+
+Use Zod for input validation where appropriate.
+
+If needed, you can seed some mock data directly via seed.ts so the UI shows meaningful dashboards.
+
+7. Replit Integration
+
+Make sure:
+
+package.json includes:
+
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:generate": "prisma generate",
+    "prisma:seed": "ts-node prisma/seed.ts"
+  }
+}
+
+
+App listens on default Next.js port (3000). Replit will proxy it automatically.
+
+Environment variables are read from process.env:
+
+DATABASE_URL
+
+JWT_SECRET
+
+8. Seed Script
+
+Create prisma/seed.ts that:
+
+Creates:
+
+1 Admin user
+
+1–2 Departments
+
+1 GM per department
+
+Several AMs
+
+Sample customers with different status
+
+Sample progress records
+
+So that after running:
+
+npx prisma migrate dev
+npx prisma db seed
+npm run dev
+
+
+the dashboards already show realistic data.
