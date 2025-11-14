@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { authService } from '@/services/auth.service';
 import { asyncHandler } from '@/middlewares/errorHandler';
 import { authenticate, AuthRequest } from '@/middlewares/auth';
@@ -9,7 +9,7 @@ const router = Router();
 // Register
 router.post(
   '/register',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const data = registerSchema.parse(req.body);
     const user = await authService.register(data);
 
@@ -20,7 +20,7 @@ router.post(
 // Login
 router.post(
   '/login',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = loginSchema.parse(req.body);
     const result = await authService.login(email, password);
 
@@ -46,7 +46,7 @@ router.post(
 // Refresh
 router.post(
   '/refresh',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
     
     if (!refreshToken) {
@@ -69,7 +69,7 @@ router.post(
 // Logout
 router.post(
   '/logout',
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const refreshToken = req.cookies?.refreshToken;
 
     if (refreshToken) {
@@ -86,7 +86,7 @@ router.post(
 router.get(
   '/me',
   authenticate,
-  asyncHandler(async (req: AuthRequest, res) => {
+  asyncHandler(async (req: AuthRequest, res: Response) => {
     const user = await authService.me(req.user!.userId);
     res.json({ user });
   })
