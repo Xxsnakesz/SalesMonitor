@@ -1,10 +1,3 @@
-cd /var/www/html/SalesMonitor
-
-# Remove the corrupted file
-rm frontend/src/types/index.ts
-
-# Create a clean version
-cat > frontend/src/types/index.ts << 'EOF'
 // Define Role enum locally instead of importing from Prisma
 export enum Role {
   ADMIN = 'ADMIN',
@@ -17,7 +10,11 @@ export interface User {
   email: string;
   name: string;
   role: Role;
-  gmId?: string | null;
+  departmentId?: string | null;
+  department?: {
+    id: string;
+    name: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -80,7 +77,7 @@ export interface RegisterRequest {
   password: string;
   name: string;
   role: Role;
-  gmId?: string;
+  departmentId?: string;
 }
 
 export interface CustomersByStatus {
@@ -126,7 +123,3 @@ export interface ApiError {
   statusCode: number;
   errors?: Record<string, string[]>;
 }
-EOF
-
-# Verify it's clean
-head -3 frontend/src/types/index.ts
