@@ -37,7 +37,8 @@ export default function DashboardPage() {
     }).format(value);
   };
 
-  const chartData = dashboardData?.customersByStatus.map(s => ({
+  // Fixed: Added optional chaining for customersByStatus
+  const chartData = dashboardData?.customersByStatus?.map(s => ({
     name: s.status.replace('-', ' ').toUpperCase(),
     value: s.count,
   })) || [];
