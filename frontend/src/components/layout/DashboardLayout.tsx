@@ -18,6 +18,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Dashboard', href: '/dashboard', icon: '📊' },
     { name: 'Customers', href: '/dashboard/customers', icon: '👥' },
     { name: 'Targets', href: '/dashboard/targets', icon: '🎯' },
+    ...(user?.role === 'ADMIN' ? [{ name: 'Users', href: '/dashboard/users', icon: '👤' }] : []),
   ];
 
   const handleLogout = () => {
