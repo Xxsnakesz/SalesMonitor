@@ -19,6 +19,17 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
+CREATE TABLE "Session" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Session_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Department" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -112,6 +123,18 @@ CREATE INDEX "User_role_idx" ON "User"("role");
 CREATE INDEX "User_departmentId_idx" ON "User"("departmentId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Session_token_key" ON "Session"("token");
+
+-- CreateIndex
+CREATE INDEX "Session_userId_idx" ON "Session"("userId");
+
+-- CreateIndex
+CREATE INDEX "Session_token_idx" ON "Session"("token");
+
+-- CreateIndex
+CREATE INDEX "Session_expiresAt_idx" ON "Session"("expiresAt");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Department_name_key" ON "Department"("name");
 
 -- CreateIndex
@@ -149,6 +172,9 @@ CREATE INDEX "ActivityLog_timestamp_idx" ON "ActivityLog"("timestamp");
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "Department"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Department" ADD CONSTRAINT "Department_gmId_fkey" FOREIGN KEY ("gmId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
